@@ -46,7 +46,7 @@ public final class SkyScopeClient implements ClientModInitializer {
                 if (chat.settings().enabled()) ChatFlipNotifier.postSellerRow(Minecraft.getInstance(), row, chat.settings());
             }), this::applyFilters);
         QuickBuyOverlay.register(quick);
-        autoBuy = new JavaAutoBuyCoordinator(inbox::best, inbox::dismiss, quick);
+        autoBuy = new JavaAutoBuyCoordinator(inbox::best, inbox::dismiss, quick, account::deviceToken);
         autoBuy.register();
         account.start();
         feed.start();
@@ -56,6 +56,7 @@ public final class SkyScopeClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             String token = account.deviceToken();
             if (!token.equals(connectedToken)) {
+                autoBuy.cancel();
                 // Close the old account session and queue before reconnecting after linking/revocation.
                 if (!connectedToken.isBlank()) quick.setAutoBuyEnabled(false);
                 connectedToken = token;
@@ -136,9 +137,9 @@ public final class SkyScopeClient implements ClientModInitializer {
                 }
                 case "sync" -> { account.refresh(); say(source,"Profile refresh requested. Current status: "+account.status().state()); }
                 case "reconnect" -> { feed.forceReconnect(); say(source,"Feed reconnect requested."); }
-                case "pause" -> { inbox.setPaused(true); say(source,"Alerts paused."); }
+                case "pause" -> { autoBuy.cancel(); inbox.setPaused(true); say(source,"Alerts paused."); }
                 case "resume" -> { inbox.setPaused(false); say(source,"Alerts resumed."); }
-                case "clear" -> { inbox.clear(); say(source,"Queue cleared."); }
+                case "clear" -> { autoBuy.cancel(); inbox.clear(); say(source,"Queue cleared."); }
                 case "queue" -> {
                     say(source,inbox.top().size()+" queued flips.");
                     inbox.top().stream().limit(10).forEach(f -> say(source,f.itemName()+" • estimated net "+f.netProfit()+" • /viewauction "+f.auctionId()));

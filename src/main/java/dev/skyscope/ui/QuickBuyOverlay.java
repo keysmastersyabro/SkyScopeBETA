@@ -88,10 +88,14 @@ public final class QuickBuyOverlay {
         SESSION.clicked(current.stage(), System.nanoTime());
     }
 
-    /** Performs one action only after the same exact BIN/confirm validation used by Quick Buy. */
-    static CompanionClickResult autoClick(Minecraft client, QuickBuySettingsManager settings) {
+    /** Automatic actions additionally require a validated, session-bound purchase intent. */
+    static CompanionClickResult autoClick(Minecraft client, QuickBuySettingsManager settings,
+                                          AutoBuyTargetGuard target,
+                                          java.util.function.Supplier<String> accountSession) {
         if (!settings.settings().enabled() || !settings.settings().autoBuyEnabled())
             return new CompanionClickResult(false, "DISABLED", "Java Auto Buy is disabled.");
+        if (target == null || !target.active())
+            return new CompanionClickResult(false, "NO_TARGET", "No accepted purchase target.");
         Screen screen = client.screen;
         if (!(screen instanceof ContainerScreen container) || !isAuctionShape(container)
                 || client.player == null || client.gameMode == null)
@@ -100,12 +104,22 @@ public final class QuickBuyOverlay {
         if (!current.clickable())
             return new CompanionClickResult(false, current.stage().name(), current.label());
         long now = System.nanoTime();
-        if (!allowPhysicalClick(container.getMenu().containerId, current.slot(), current.stage(), now))
-            return new CompanionClickResult(false, "CLICK_GUARD", "That validated action was already clicked.");
-        client.gameMode.handleContainerInput(container.getMenu().containerId, current.slot(), 0,
-                ContainerInput.PICKUP, client.player);
-        SESSION.clicked(current.stage(), now);
-        return new CompanionClickResult(true, current.stage().name(), current.label());
+        Object connection = client.getConnection();
+        String account = accountSession.get();
+        var result = target.click(AuctionPurchaseScreen.read(container, current.slot()),
+                AutoBuyTargetGuard.Phase.valueOf(current.stage().name()), connection, account,
+                java.time.Instant.now(), now, () -> {
+                    if (client.screen != container || client.getConnection() != connection
+                            || !account.equals(accountSession.get()) || !settings.settings().enabled()
+                            || !settings.settings().autoBuyEnabled()) return false;
+                    if (!allowPhysicalClick(container.getMenu().containerId, current.slot(), current.stage(), now)) return false;
+                    client.gameMode.handleContainerInput(container.getMenu().containerId, current.slot(), 0,
+                            ContainerInput.PICKUP, client.player);
+                    SESSION.clicked(current.stage(), now);
+                    return true;
+                });
+        return new CompanionClickResult(result == AutoBuyTargetGuard.Result.CLICKED,
+                result.name(), current.label());
     }
 
     static CompanionState autoState(Minecraft client, QuickBuySettingsManager settings) {

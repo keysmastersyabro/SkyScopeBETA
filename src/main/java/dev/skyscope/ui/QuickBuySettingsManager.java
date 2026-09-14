@@ -15,16 +15,20 @@ public final class QuickBuySettingsManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("skyscope-quick-buy-config");
     private final Path path;
     private volatile QuickBuySettings settings;
+    private volatile long revision;
 
     public QuickBuySettingsManager(Path path) { this.path = path; this.settings = load(); }
     public QuickBuySettings settings() { return settings; }
+    public long revision() { return revision; }
     public synchronized QuickBuySettings setEnabled(boolean enabled) {
+        revision++;
         settings = new QuickBuySettings(QuickBuySettings.CURRENT_VERSION, enabled,
                 enabled && settings.autoBuyEnabled());
         save(settings);
         return settings;
     }
     public synchronized QuickBuySettings setAutoBuyEnabled(boolean enabled) {
+        revision++;
         settings = new QuickBuySettings(QuickBuySettings.CURRENT_VERSION,
                 enabled || settings.enabled(), enabled);
         save(settings);

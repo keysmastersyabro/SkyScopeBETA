@@ -38,3 +38,5 @@ dev/skyscope/ui/QuickBuySession.java
 dev/skyscope/ui/QuickBuySettings.java
 dev/skyscope/ui/QuickBuySettingsManager.java
 dev/skyscope/ui/SkyScopeUi.java
+dev/skyscope/ui/AutoBuyTargetGuard.java
+dev/skyscope/ui/AuctionPurchaseScreen.java
