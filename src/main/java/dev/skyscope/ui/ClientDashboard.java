@@ -27,6 +27,11 @@ public final class ClientDashboard extends Screen {
         addRenderableWidget(Button.builder(Component.literal(inbox.paused()?"Resume alerts":"Pause alerts"),b->{inbox.togglePaused();b.setMessage(Component.literal(inbox.paused()?"Resume alerts":"Pause alerts"));}).bounds(x+half+6,y+26,half,20).build());
         addRenderableWidget(Button.builder(Component.literal("Reconnect"),b->feed.forceReconnect()).bounds(x,y+52,half,20).build());
         addRenderableWidget(Button.builder(Component.literal("Close"),b->onClose()).bounds(x+half+6,y+52,half,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Instant median alerts: "+(feed.instantMedianAlertsEnabled()?"ON":"OFF")),b->{
+            try {feed.setInstantMedianAlertsEnabled(!feed.instantMedianAlertsEnabled());
+                b.setMessage(Component.literal("Instant median alerts: "+(feed.instantMedianAlertsEnabled()?"ON":"OFF")));}
+            catch(java.io.IOException error){b.setMessage(Component.literal("Setting could not be saved"));}
+        }).bounds(x,y+78,w,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mouseX,int mouseY,float delta) {
         SkyScopeUi.background(g,width,height);

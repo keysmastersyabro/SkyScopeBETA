@@ -64,15 +64,15 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
     public void start(){if(maintenanceStarted.compareAndSet(false,true))scheduler.scheduleAtFixedRate(this::maintain,5,5,TimeUnit.SECONDS);if(settings.settings().enabled())connect();else state="DISABLED";}
     public Status status(){var l=latency.snapshot();return new Status(state,settings.settings().endpoint(),connectedAt,lastMessageAt,lastFlipAt,failures,reconnects,malformed,serverRejected,received,accepted,rejected,replayed,lastReplayAt,l.sequenceGaps(),l.outOfOrder(),l.lastSequence(),l,lastServerRejection,lastRejection,lastError);}
     public synchronized List<RejectedCandidate> whyRejections(){return List.copyOf(whyRejected);}
-    public void forceReconnect(){reconnectGate.cancel();connectionEpoch.invalidate();WebSocket old=socket;socket=null;if(old!=null)old.abort();failures=0;closed=false;scheduler.execute(this::connect);}
-    public void stop(){closed=true;reconnectGate.cancel();connectionEpoch.invalidate();state="DISABLED";WebSocket old=socket;socket=null;if(old!=null)old.abort();}
+    public void forceReconnect(){instantMedianAlerts.clear();reconnectGate.cancel();connectionEpoch.invalidate();WebSocket old=socket;socket=null;if(old!=null)old.abort();failures=0;closed=false;scheduler.execute(this::connect);}
+    public void stop(){instantMedianAlerts.clear();closed=true;reconnectGate.cancel();connectionEpoch.invalidate();state="DISABLED";WebSocket old=socket;socket=null;if(old!=null)old.abort();}
     private void connect(){if(closed||socket!=null||!settings.settings().enabled())return;long epoch=connectionEpoch.begin();if(epoch<0)return;state="CONNECTING";BackendSettings config=settings.settings();String endpoint=config.endpoint();
         try { var builder=http.newWebSocketBuilder().connectTimeout(Duration.ofSeconds(10));String credential=bearer.get();if(credential!=null&&!credential.isBlank())builder.header("Authorization","Bearer "+credential);
             builder.buildAsync(dev.skyscope.telemetry.ProviderEndpoint.hostedFeed(endpoint),new EpochListener(epoch,endpoint)).whenComplete((value,error)->{connectionEpoch.complete(epoch);if(!connectionEpoch.current(epoch)||closed){if(value!=null)value.abort();return;}if(error!=null){lastError=root(error);state="RETRYING";LOGGER.warn("Hosted feed connection failed: {}",lastError);retry();}else if(socket==null)socket=value;});
         } catch(Exception error){connectionEpoch.complete(epoch);if(!connectionEpoch.current(epoch)||closed)return;lastError=root(error);state="RETRYING";LOGGER.warn("Hosted feed setup failed: {}",lastError);retry();}}
     private void retry(){if(closed)return;long token=reconnectGate.schedule();if(token<0)return;failures++;reconnects++;BackendSettings config=settings.settings();long delay=Math.min(config.maximumReconnectSeconds(),config.minimumReconnectSeconds()*(1L<<Math.min(8,failures-1)));scheduler.schedule(()->{if(reconnectGate.claim(token))connect();},delay,TimeUnit.SECONDS);}
     @Override public void onOpen(WebSocket webSocket){activate(webSocket,settings.settings().endpoint());}
-    private void activate(WebSocket webSocket,String endpoint){socket=webSocket;failures=0;reconnectGate.cancel();connectedAt=System.currentTimeMillis();lastMessageAt=connectedAt;state="AUTHENTICATING";lastError="";connectedEndpoint=endpoint;lastSubscription=subscription();webSocket.sendText(lastSubscription,true);webSocket.request(RECEIVE_WINDOW);LOGGER.info("Connected to SkyScope hosted feed at {} and waiting for subscription acknowledgement",endpoint);}
+    private void activate(WebSocket webSocket,String endpoint){instantMedianAlerts.clear();socket=webSocket;failures=0;reconnectGate.cancel();connectedAt=System.currentTimeMillis();lastMessageAt=connectedAt;state="AUTHENTICATING";lastError="";connectedEndpoint=endpoint;lastSubscription=subscription();webSocket.sendText(lastSubscription,true);webSocket.request(RECEIVE_WINDOW);LOGGER.info("Connected to SkyScope hosted feed at {} and waiting for subscription acknowledgement",endpoint);}
     @Override public CompletionStage<?> onText(WebSocket webSocket,CharSequence data,boolean last){
         long receiveNanos=System.nanoTime(),receiveAt=System.currentTimeMillis();
         String raw=null;boolean oversized=false;
@@ -117,6 +117,7 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
             long decodeStarted=System.nanoTime();
             JsonObject protocol=JsonParser.parseString(raw).getAsJsonObject();
             String type=protocol.has("type")?protocol.get("type").getAsString():"";
+            if(type.equals("instant_median_alert")||type.equals("instant_median_result")){if(InstantMedianAlerts.allowed(protocol,filters.get(),receiveAt))instantMedianAlerts.accept(protocol,receiveAt);return;}
             if("hello".equals(type)){state="SUBSCRIBING";latency.resetSequence();}
             else if("subscribed".equals(type)){state="LIVE";lastError="";applyServerFilters(protocol);}
             else if("error".equals(type)){state="PROTOCOL_ERROR";lastError=protocol.has("code")?protocol.get("code").getAsString():"backend protocol error";}
@@ -229,6 +230,14 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
     private static long whole(JsonObject value,String key,long fallback){return value.has(key)&&value.get(key).isJsonPrimitive()?value.get(key).getAsLong():fallback;}
     private static double decimal(JsonObject value,String key){return decimal(value,key,0);}
     private static double decimal(JsonObject value,String key,double fallback){return value.has(key)&&value.get(key).isJsonPrimitive()?value.get(key).getAsDouble():fallback;}
+    private final InstantMedianAlerts instantMedianAlerts=new InstantMedianAlerts();
+    public void configureInstantMedianAlerts(java.nio.file.Path path, Consumer<InstantMedianAlerts.Notice> consumer){instantMedianAlerts.configure(path,consumer);}
+    public boolean instantMedianAlertsEnabled(){return instantMedianAlerts.enabled();}
+    public void setInstantMedianAlertsEnabled(boolean enabled) throws java.io.IOException {
+        instantMedianAlerts.setEnabled(enabled);
+        WebSocket current=socket;
+        if(current!=null && !closed){lastSubscription=subscription();current.sendText(lastSubscription,true);}
+    }
     private String subscription(){
         FlipSettings f=filters.get().validated();
         Map<String,Object> profile=Map.ofEntries(
@@ -237,7 +246,9 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
                 Map.entry("minimumConfidencePercent",f.minimumConfidencePercent()),Map.entry("maximumRiskPercent",f.maximumRiskPercent()),Map.entry("minimumSalesPerDay",f.minimumSalesPerDay()),
                 Map.entry("maximumEstimatedSellHours",f.maximumEstimatedSellHours()),Map.entry("minimumSoldSamples",f.minimumSoldSamples()),Map.entry("maximumVolatilityPercent",f.maximumVolatilityPercent()),
                 Map.entry("categories",f.categories()),Map.entry("rarities",f.rarities()),Map.entry("includeKeywords",f.includeKeywords()),Map.entry("excludeKeywords",f.excludeKeywords()),Map.entry("allowActiveMarketBootstrap",f.allowActiveMarketBootstrap()));
-        return GSON.toJson(Map.of("type","subscribe","matchBackendFilters",settings.settings().matchBackendFilters(),"filters",profile));
+        Map<String,Object> message=new java.util.LinkedHashMap<>(Map.of("type","subscribe","matchBackendFilters",settings.settings().matchBackendFilters(),"filters",profile));
+        if(instantMedianAlerts.enabled())message.put("instantMedianAlerts",true);
+        return GSON.toJson(message);
     }
     private static String root(Throwable error){Throwable value=error;while(value.getCause()!=null)value=value.getCause();String message=dev.skyscope.telemetry.TelemetrySanitizer.text(value.getMessage(),160);return message.isBlank()?value.getClass().getSimpleName():message;}
     /** Invalidates callbacks from older retry schedules so one feed owns the socket at a time. */
@@ -267,5 +278,5 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
         @Override public CompletionStage<?> onClose(WebSocket webSocket,int statusCode,String reason){if(!connectionEpoch.current(epoch))return null;return HostedFlipClient.this.onClose(webSocket,statusCode,reason);}
         @Override public void onError(WebSocket webSocket,Throwable error){if(connectionEpoch.current(epoch))HostedFlipClient.this.onError(webSocket,error);}
     }
-    @Override public void close(){closed=true;reconnectGate.cancel();connectionEpoch.invalidate();state="CLOSED";WebSocket value=socket;socket=null;if(value!=null)value.sendClose(WebSocket.NORMAL_CLOSURE,"client shutdown");scheduler.shutdownNow();messageProcessor.shutdownNow();}
+    @Override public void close(){instantMedianAlerts.clear();closed=true;reconnectGate.cancel();connectionEpoch.invalidate();state="CLOSED";WebSocket value=socket;socket=null;if(value!=null)value.sendClose(WebSocket.NORMAL_CLOSURE,"client shutdown");scheduler.shutdownNow();messageProcessor.shutdownNow();}
 }

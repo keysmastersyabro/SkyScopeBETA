@@ -43,3 +43,5 @@ Each user links their own account. No credentials or local configuration are inc
 ## License
 
 [MIT](LICENSE). This license covers the client source distributed in this repository.
+
+Use `/skyscope instantmedian on` or `/skyscope instantmedian off` (default OFF). With this option enabled, listings below 100,000 coins whose seven-day **item-ID median** exceeds 3,000,000 coins appear before pricing finishes. Variants are pooled in that reference; it is not a resale target. The initial notification shows profit pending and cannot trigger Auto Buy. A later update shows canonical pricing or its rejection/unresolved reason. Only online delivery is supported, with a 180-second result-tracking window. Ordinary validated flips retain normal filters and purchase controls.

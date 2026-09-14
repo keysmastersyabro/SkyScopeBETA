@@ -40,3 +40,5 @@ dev/skyscope/ui/QuickBuySettingsManager.java
 dev/skyscope/ui/SkyScopeUi.java
 dev/skyscope/ui/AutoBuyTargetGuard.java
 dev/skyscope/ui/AuctionPurchaseScreen.java
+dev/skyscope/hosted/InstantMedianAlerts.java
+dev/skyscope/ui/InstantMedianControls.java
