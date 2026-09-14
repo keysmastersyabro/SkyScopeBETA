@@ -11,3 +11,4 @@ config/
 *.key
 *.pem
 .DS_Store
+/logs/
