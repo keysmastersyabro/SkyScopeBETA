@@ -1,0 +1,2 @@
+fabric.mod.json
+assets/skyscope/lang/en_us.json

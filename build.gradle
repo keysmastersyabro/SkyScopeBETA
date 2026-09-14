@@ -47,6 +47,8 @@ test {
 tasks.register('verifyClientSources') {
     inputs.files(fileTree('src/main/java'))
     inputs.file('client-sources.txt')
+    inputs.file('client-resources.txt')
+    inputs.files(fileTree('src/main/resources'))
     doLast {
         def approved = file('client-sources.txt').readLines('UTF-8')
             .findAll { !it.isBlank() && !it.startsWith('#') }.toSet()
@@ -54,20 +56,39 @@ tasks.register('verifyClientSources') {
             file('src/main/java').toPath().relativize(it.toPath()).toString().replace('\\', '/')
         }.toSet()
         if (present != approved) throw new GradleException('Client source manifest differs from reviewed source files')
+        def approvedResources = file('client-resources.txt').readLines('UTF-8')
+            .findAll { !it.isBlank() && !it.startsWith('#') }.toSet()
+        def presentResources = fileTree('src/main/resources').files.collect {
+            file('src/main/resources').toPath().relativize(it.toPath()).toString().replace('\\', '/')
+        }.toSet()
+        if (presentResources != approvedResources)
+            throw new GradleException('Client resource manifest differs from reviewed resource files')
     }
 }
 compileJava.dependsOn verifyClientSources
 
 tasks.register('verifyClientArtifact') {
-    dependsOn jar, verifyClientSources
+    dependsOn jar, sourcesJar, verifyClientSources
     doLast {
         File artifact = tasks.jar.archiveFile.get().asFile
         def approved = file('client-sources.txt').readLines('UTF-8')
             .findAll { !it.isBlank() && !it.startsWith('#') }
             .collect { it.replace('.java', '.class') }.toSet()
-        def resources = fileTree('src/main/resources').files.collect {
-            file('src/main/resources').toPath().relativize(it.toPath()).toString().replace('\\', '/')
-        }.toSet() + ['META-INF/MANIFEST.MF', 'LICENSE']
+        def approvedResources = file('client-resources.txt').readLines('UTF-8')
+            .findAll { !it.isBlank() && !it.startsWith('#') }.toSet()
+        def resources = approvedResources + ['META-INF/MANIFEST.MF', 'LICENSE']
+        def secretPatterns = [
+            ~/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
+            ~/\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b/,
+            ~/\bAKIA[A-Z0-9]{16}\b/,
+            ~/\bxox[baprs]-[A-Za-z0-9-]{20,}\b/,
+            ~/(?i)(?:postgres(?:ql)?|redis|mongodb(?:\+srv)?):\/\/[^\s:\/]+:[^\s@]+@/
+        ]
+        def checkContent = { entry ->
+            String text = new String(entry.file.bytes, java.nio.charset.StandardCharsets.ISO_8859_1)
+            if (secretPatterns.any { it.matcher(text).find() })
+                throw new GradleException('Potential secret in packaged file: ' + entry.relativePath.pathString)
+        }
         zipTree(artifact).visit { entry ->
             if (entry.directory) return
             String name = entry.relativePath.pathString
@@ -77,6 +98,14 @@ tasks.register('verifyClientArtifact') {
             } else if (!resources.contains(name)) {
                 throw new GradleException('Unexpected file in client JAR: ' + name)
             }
+            checkContent(entry)
+        }
+        def sourceEntries = approved.collect { it.replace('.class', '.java') }.toSet() + resources
+        zipTree(tasks.sourcesJar.archiveFile.get().asFile).visit { entry ->
+            if (entry.directory) return
+            if (!sourceEntries.contains(entry.relativePath.pathString))
+                throw new GradleException('Unexpected file in client source JAR: ' + entry.relativePath.pathString)
+            checkContent(entry)
         }
         def metadata = new groovy.json.JsonSlurper().parse(file('build/resources/main/fabric.mod.json'))
         if (metadata.name != 'SkyScope' || metadata.id != 'skyscope' || metadata.version != project.version.toString())
