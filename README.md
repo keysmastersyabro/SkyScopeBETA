@@ -2,7 +2,7 @@
 
 Open-source Minecraft client for SkyScope, built for **Minecraft 26.1.2 / Fabric**.
 
-[**Download SkyScope 3.9.14**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.14/skyscope-3.9.14.jar) · [Commands](COMMANDS.md)
+[**Download SkyScope 3.9.16**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.16/skyscope-3.9.16.jar) · [Commands](COMMANDS.md)
 
 ## Features
 
@@ -15,12 +15,22 @@ Flip discovery and pricing run on SkyScope's servers. This repository contains t
 ## Install
 
 1. Use **Minecraft 26.1.2**, **Fabric Loader 0.19.3+**, **Fabric API** and **Java 25+**. Fabric API **0.154.0+26.1.2** is the tested version.
-2. Download `skyscope-3.9.14.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
+2. Download `skyscope-3.9.16.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
 3. Sign in at [skyscope.dev](https://skyscope.dev) and generate a Minecraft linking code.
 4. Run `/skyscope link <code>` in Minecraft.
 5. Press **Right Shift** for the dashboard or **B** for the flip browser. `/skyscope help` lists the commands.
 
 Quick Buy and Auto Buy are off on a fresh install. Auto Buy pauses if it cannot verify the auction identity, item and exact price; you can inspect and buy manually instead. Existing settings remain in `config/skyscope-public/` for compatibility with the previous release; the mod is named SkyScope.
+
+## Instant median alerts
+
+Use `/skyscope instantmedian on` to enable this optional mode, or `/skyscope instantmedian off` to disable it. It is OFF by default; the dashboard also has a toggle.
+
+Listings with a buy price **below 100,000 coins** and a seven-day **item-ID median above 3,000,000 coins** can appear before pricing finishes. The alert shows **profit pending**. Item-ID medians pool variants and are not build-specific resale targets.
+
+If **Auto Buy is also ON**, these alerts can start an immediate purchase **before profit is confirmed**. Current purchase limits, blacklist and auction verification still apply. Later pricing updates show the calculated target/profit or a rejection/unresolved reason; they do not themselves create another purchase intent. Pricing may be unresolved if the auction becomes terminal first.
+
+Alerts require an online connection. Results are tracked for up to 180 seconds. Normal validated flips retain their usual filters and purchase controls.
 
 ## Build from source
 
@@ -34,7 +44,7 @@ cd SkyScopeBETA
 
 On Windows, use `gradlew.bat --no-daemon build`. The first build downloads Gradle, Minecraft, Fabric and test dependencies; later cached builds can use `--offline`.
 
-The installable JAR is `build/libs/skyscope-3.9.14.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
+The installable JAR is `build/libs/skyscope-3.9.16.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
 
 ## Data and permissions
 
@@ -43,5 +53,3 @@ Each user links their own account. No credentials or local configuration are inc
 ## License
 
 [MIT](LICENSE). This license covers the client source distributed in this repository.
-
-Use `/skyscope instantmedian on` or `/skyscope instantmedian off` (default OFF). With this option enabled, listings below 100,000 coins whose seven-day **item-ID median** exceeds 3,000,000 coins appear before pricing finishes. Variants are pooled in that reference; it is not a resale target. The initial notification shows profit pending and can trigger immediate Auto Buy when your Auto Buy toggle is ON, before pricing confirms profit. A later update shows canonical pricing or its rejection/unresolved reason. Only online delivery is supported, with a 180-second result-tracking window. Ordinary validated flips retain normal filters and purchase controls.
