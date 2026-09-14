@@ -31,4 +31,19 @@ final class InstantMedianAlertsTest {
   assertTrue(InstantMedianAlerts.allowed(json,filters,1000000));
   assertFalse(InstantMedianAlerts.allowed(json,filters.withExcludedKeyword("example"),1000000));
  }
+ @Test void explicitInstantPermissionProducesOnlyAnUnpricedPurchaseIntent() throws Exception {
+  var notices=new ArrayList<InstantMedianAlerts.Notice>();var mode=new InstantMedianAlerts();mode.configure(directory.resolve("buy.txt"),notices::add);mode.setEnabled(true);
+  var json=JsonParser.parseString(alert(99999,3000001)).getAsJsonObject();
+  json.addProperty("itemId","EXAMPLE");json.addProperty("category","COSMETIC");json.addProperty("rarity","EPIC");
+  mode.accept(json,1000000);assertNull(notices.getLast().purchase());mode.clear();
+  json.addProperty("instantPurchaseEligible",true);mode.accept(json,1000000);
+  var purchase=notices.getLast().purchase();assertNotNull(purchase);
+  var intent=purchase.intent(1000000);assertNotNull(intent);assertFalse(intent.hasPricing());
+  assertEquals(99999,intent.purchasePrice());assertEquals(0,intent.targetPrice());assertEquals(0,intent.netProfit());
+  assertNull(purchase.intent(2000000));
+  assertTrue(purchase.allowed(dev.skyscope.flips.FlipSettings.defaults(),1000000));
+  assertFalse(purchase.allowed(dev.skyscope.flips.FlipSettings.defaults().withExcludedKeyword("example"),1000000));
+  var result=JsonParser.parseString("{\"type\":\"instant_median_result\",\"auctionId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"purchasePrice\":99999,\"autoBuyEligible\":false,\"status\":\"ACCEPTED\",\"targetPrice\":4000000,\"netProfit\":3800000,\"reason\":\"accepted\"}").getAsJsonObject();
+  mode.accept(result,1000001);assertNull(notices.getLast().purchase());
+ }
 }

@@ -8,7 +8,26 @@ import java.util.function.Consumer;
 
 /** Informational, opt-in notices. This path cannot construct a purchasable FlipOpportunity. */
 public final class InstantMedianAlerts {
-    public record Notice(String auctionId, String text) {}
+    public record Notice(String auctionId, String text, Purchase purchase) {}
+    /** Purchase-only intent: all valuation fields stay absent/zero until canonical pricing completes. */
+    public record Purchase(String auctionId, String itemName, String itemId, long price, long receivedAt, long expiresAt,
+                           String category, String rarity) {
+        public boolean allowed(dev.skyscope.flips.FlipSettings filters, long now) {
+            if(intent(now)==null)return false;
+            JsonObject json=new JsonObject();json.addProperty("type","instant_median_alert");
+            json.addProperty("purchasePrice",price);json.addProperty("receivedAt",receivedAt);
+            json.addProperty("category",category);json.addProperty("rarity",rarity);
+            json.addProperty("itemName",itemName);json.addProperty("itemId",itemId);
+            return InstantMedianAlerts.allowed(json,filters,now);
+        }
+        public dev.skyscope.flips.FlipOpportunity intent(long now) {
+            if(!auctionId.matches("[a-fA-F0-9]{32}") || price<=0 || price>=100000 || expiresAt<=now ||
+                receivedAt>now+30000 || now-receivedAt>150000 || itemId.isBlank() || itemName.isBlank()) return null;
+            return new dev.skyscope.flips.FlipOpportunity(auctionId,itemName,itemId,price,0,0,0,0,
+                "INSTANT_MEDIAN_PENDING","User-enabled instant purchase; profit pending",java.time.Instant.ofEpochMilli(receivedAt),
+                0,100,0,0,0,0,category,rarity,"UNPRICED_INSTANT_MEDIAN",0,0,"WAITING",0);
+        }
+    }
     private record Pending(long price, long receivedAt, String name) {}
     private final Map<String, Pending> pending = new LinkedHashMap<>();
     private Path path;
@@ -36,7 +55,9 @@ public final class InstantMedianAlerts {
         try {
             String type=json.get("type").getAsString(), id=json.get("auctionId").getAsString();
             if(!id.matches("[a-fA-F0-9]{32}") || json.get("autoBuyEligible").getAsBoolean()) return;
-            long price=json.get("purchasePrice").getAsLong();
+            double rawPrice=json.get("purchasePrice").getAsDouble();
+            if(!Double.isFinite(rawPrice) || rawPrice!=Math.rint(rawPrice))return;
+            long price=(long)rawPrice;
             if(price<=0 || price>=100000) return;
             pending.entrySet().removeIf(e->now-e.getValue().receivedAt()>210000);
             if(type.equals("instant_median_alert")) {
@@ -47,8 +68,11 @@ public final class InstantMedianAlerts {
                     json.get("expiresAt").getAsLong()<=now || pending.containsKey(id) || pending.size()>=256) return;
                 String name=json.get("itemName").getAsString();
                 pending.put(id,new Pending(price,received,name));
+                Purchase purchase=json.has("instantPurchaseEligible") && json.get("instantPurchaseEligible").getAsBoolean()
+                    ? new Purchase(id,name,json.get("itemId").getAsString(),price,received,json.get("expiresAt").getAsLong(),
+                        json.get("category").getAsString(),json.get("rarity").getAsString()) : null;
                 consumer.accept(new Notice(id,"§eInstant median alert: §f"+name+" §6Buy "+coins(price)+
-                    " §7• weekly item-ID median "+coins(median)+" (>3m; variants pooled) • §eprofit pending"));
+                    " §7• weekly item-ID median "+coins(median)+" (>3m; variants pooled) • §eprofit pending",purchase));
             } else if(type.equals("instant_median_result")) {
                 Pending previous=pending.get(id);
                 if(previous==null || previous.price()!=price) return;
@@ -61,7 +85,7 @@ public final class InstantMedianAlerts {
                     amounts="Target "+coins(target)+" • estimated net "+coins(profit);
                 }
                 consumer.accept(new Notice(id,"§bPricing update: §f"+previous.name()+" §7• "+status+
-                    " • "+amounts+" • "+json.get("reason").getAsString()+" (pricing outcome, not purchase confirmation)"));
+                    " • "+amounts+" • "+json.get("reason").getAsString()+" (pricing outcome, not purchase confirmation)",null));
             }
         } catch(RuntimeException ignored) { /* Malformed data is not a trading signal. */ }
     }

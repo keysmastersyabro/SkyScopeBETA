@@ -46,9 +46,10 @@ public final class SkyScopeClient implements ClientModInitializer {
                 if (chat.settings().enabled()) ChatFlipNotifier.postSellerRow(Minecraft.getInstance(), row, chat.settings());
             }), this::applyFilters);
         QuickBuyOverlay.register(quick);
-        InstantMedianControls.install(feed, CONFIG.resolve("instant-median.txt"), () -> !inbox.paused() && chat.settings().enabled());
+
         autoBuy = new JavaAutoBuyCoordinator(inbox::best, inbox::dismiss, quick, account::deviceToken);
         autoBuy.register();
+        InstantMedianControls.install(feed, CONFIG.resolve("instant-median.txt"), () -> !inbox.paused(), () -> chat.settings().enabled(), autoBuy);
         account.start();
         feed.start();
         var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("skyscope", "main"));

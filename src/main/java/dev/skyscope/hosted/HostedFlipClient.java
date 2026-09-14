@@ -232,6 +232,13 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
     private static double decimal(JsonObject value,String key,double fallback){return value.has(key)&&value.get(key).isJsonPrimitive()?value.get(key).getAsDouble():fallback;}
     private final InstantMedianAlerts instantMedianAlerts=new InstantMedianAlerts();
     public void configureInstantMedianAlerts(java.nio.file.Path path, Consumer<InstantMedianAlerts.Notice> consumer){instantMedianAlerts.configure(path,consumer);}
+    public java.util.function.BooleanSupplier instantPurchaseSession() {
+        WebSocket original=socket;String account=bearer.get();
+        return () -> original!=null && socket==original && !closed && !account.isBlank() && account.equals(bearer.get());
+    }
+    public boolean instantPurchaseAllowed(InstantMedianAlerts.Purchase purchase) {
+        return instantMedianAlerts.enabled() && purchase.allowed(filters.get(),System.currentTimeMillis());
+    }
     public boolean instantMedianAlertsEnabled(){return instantMedianAlerts.enabled();}
     public void setInstantMedianAlertsEnabled(boolean enabled) throws java.io.IOException {
         instantMedianAlerts.setEnabled(enabled);

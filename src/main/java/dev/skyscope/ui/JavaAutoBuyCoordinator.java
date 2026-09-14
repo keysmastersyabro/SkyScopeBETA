@@ -21,6 +21,18 @@ public final class JavaAutoBuyCoordinator {
     private final QuickBuySettingsManager settings;
     private final Supplier<String> accountSession;
     private final AutoBuyTargetGuard targetGuard = new AutoBuyTargetGuard();
+    private java.util.function.BooleanSupplier instantPermission;
+    public void prioritizeInstant(FlipOpportunity intent, java.util.function.BooleanSupplier permission) {
+        if(!enabled() || !settings.settings().enabled() || intent==null || !permission.getAsBoolean()) return;
+        Minecraft client=Minecraft.getInstance();
+        client.execute(() -> {
+            if(!enabled() || !settings.settings().enabled() || !permission.getAsBoolean() || client.getConnection()==null ||
+                client.screen!=null || !currentAuctionId.isBlank()) return;
+            instantPermission=permission;
+            open(client,intent);
+            if(currentAuctionId.isBlank())instantPermission=null;
+        });
+    }
     private String currentAuctionId = "";
     private boolean awaitingResult, sawAuction;
 
@@ -64,6 +76,7 @@ public final class JavaAutoBuyCoordinator {
     }
 
     private void tick(Minecraft client) {
+        if(instantPermission!=null && (!instantPermission.getAsBoolean() || !enabled() || !settings.settings().enabled())) {cancel(); QuickBuyOverlay.resetClickGuard(); return;}
         if (!enabled() || !settings.settings().enabled() || client.getConnection() == null
                 || accountSession.get().isBlank()) { cancel(); return; }
         try {
@@ -158,6 +171,7 @@ public final class JavaAutoBuyCoordinator {
         cancel(); // Closing a menu is not evidence that a purchase succeeded.
     }
     public void cancel() {
+        instantPermission=null;
         boolean hadTarget = !currentAuctionId.isBlank();
         targetGuard.reset(); currentAuctionId = ""; awaitingResult = false; sawAuction = false;
         if (hadTarget) QuickBuyOverlay.resetClickGuard();
