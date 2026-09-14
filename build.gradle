@@ -1,0 +1,90 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base { archivesName = project.archives_base_name }
+
+repositories { mavenCentral() }
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    testImplementation platform('org.junit:junit-bom:5.12.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand 'version': inputs.properties.version }
+}
+
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes 'Implementation-Title': 'SkyScope',
+                'Implementation-Version': project.version
+    }
+}
+test {
+    useJUnitPlatform()
+    testLogging { showStandardStreams = true }
+}
+
+
+// Keep the client boundary explicit when adding shared code or new features.
+// The source list is reviewed together with the client and checked before packaging.
+tasks.register('verifyClientSources') {
+    inputs.files(fileTree('src/main/java'))
+    inputs.file('client-sources.txt')
+    doLast {
+        def approved = file('client-sources.txt').readLines('UTF-8')
+            .findAll { !it.isBlank() && !it.startsWith('#') }.toSet()
+        def present = fileTree('src/main/java').matching { include '**/*.java' }.files.collect {
+            file('src/main/java').toPath().relativize(it.toPath()).toString().replace('\\', '/')
+        }.toSet()
+        if (present != approved) throw new GradleException('Client source manifest differs from reviewed source files')
+    }
+}
+compileJava.dependsOn verifyClientSources
+
+tasks.register('verifyClientArtifact') {
+    dependsOn jar, verifyClientSources
+    doLast {
+        File artifact = tasks.jar.archiveFile.get().asFile
+        def approved = file('client-sources.txt').readLines('UTF-8')
+            .findAll { !it.isBlank() && !it.startsWith('#') }
+            .collect { it.replace('.java', '.class') }.toSet()
+        def resources = fileTree('src/main/resources').files.collect {
+            file('src/main/resources').toPath().relativize(it.toPath()).toString().replace('\\', '/')
+        }.toSet() + ['META-INF/MANIFEST.MF', 'LICENSE']
+        zipTree(artifact).visit { entry ->
+            if (entry.directory) return
+            String name = entry.relativePath.pathString
+            if (name.endsWith('.class')) {
+                String topLevel = name.contains('$') ? name.substring(0, name.indexOf('$')) + '.class' : name
+                if (!approved.contains(topLevel)) throw new GradleException('Unreviewed class in client JAR: ' + name)
+            } else if (!resources.contains(name)) {
+                throw new GradleException('Unexpected file in client JAR: ' + name)
+            }
+        }
+        def metadata = new groovy.json.JsonSlurper().parse(file('build/resources/main/fabric.mod.json'))
+        if (metadata.name != 'SkyScope' || metadata.id != 'skyscope' || metadata.version != project.version.toString())
+            throw new GradleException('Unexpected client identity')
+        String digest = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance('SHA-256').digest(artifact.bytes))
+        new File(artifact.parentFile, artifact.name + '.sha256').setText(digest + '  ' + artifact.name + '\n', 'UTF-8')
+    }
+}
+check.dependsOn verifyClientArtifact
+
+tasks.withType(Jar).configureEach { from('LICENSE') }

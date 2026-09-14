@@ -1,31 +1,51 @@
-# SkyScopeBETA
+# SkyScope
 
-Public SkyScope mod for **Minecraft 26.1.2 / Fabric**.
+Open-source Minecraft client for SkyScope, built for **Minecraft 26.1.2 / Fabric**.
 
-## Download
+[**Download SkyScope 3.9.13**](https://github.com/keysmastersyabro/SkyScopeBETA/raw/refs/heads/main/skyscope-3.9.13.jar) · [Commands](COMMANDS.md)
 
-[**Download SkyScope Public 3.9.12-public.1**](https://github.com/keysmastersyabro/SkyScopeBETA/raw/refs/heads/main/skyscope-public-3.9.12-public.1.jar)
+## Features
 
-This is the public edition. It includes account-linked flip alerts, filters and item blacklist, the flip browser, Quick Buy, and optional Auto Buy. Owner administration, collector controls, inventory-provider tools, COFL capture, and the owner-build updater are excluded.
+- Link your SkyScope account and sync your filters.
+- Receive flip alerts and browse, sort, blacklist or dismiss items.
+- Configure chat alerts and optional Quick Buy / Auto Buy.
+
+Flip discovery and pricing run on SkyScope's servers. This repository contains the Minecraft client, its tests and build files. It does not contain the server's discovery or valuation implementation. Client-side ranking only sorts opportunities already received from the service.
 
 ## Install
 
-1. Install Minecraft **26.1.2**, **Fabric Loader 0.19.3 or later**, **Fabric API**, and **Java 25 or later**. Fabric API **0.154.0+26.1.2** was tested.
-2. Put the downloaded JAR in your Minecraft `mods` folder. Remove any other SkyScope JAR first; both editions use the same mod ID.
-3. Sign in to your own account at [skyscope.dev](https://skyscope.dev) and generate a Minecraft linking code.
+1. Use **Minecraft 26.1.2**, **Fabric Loader 0.19.3+**, **Fabric API** and **Java 25+**. Fabric API **0.154.0+26.1.2** is the tested version.
+2. Download `skyscope-3.9.13.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
+3. Sign in at [skyscope.dev](https://skyscope.dev) and generate a Minecraft linking code.
 4. Run `/skyscope link <code>` in Minecraft.
-5. Press **Right Shift** for the dashboard or **B** for the flip browser. Use `/skyscope help` for commands and `/skyscope filters` for filters.
+5. Press **Right Shift** for the dashboard or **B** for the flip browser. `/skyscope help` lists the commands.
 
-Quick Buy and Auto Buy are **off on a fresh install**. The public edition uses its own `config/skyscope-public/` folder.
+Quick Buy and Auto Buy are off on a fresh install. Existing settings remain in `config/skyscope-public/` for compatibility with the previous release; the mod is named SkyScope.
 
-## File verification
+## Build from source
 
-The uploaded JAR passed the public-artifact safety check and **77 public-mod tests**. No account credentials or local configuration are bundled.
+Install a Java 25 JDK, clone this repository and run:
 
-SHA-256:
-
-```text
-e168883501274ed60cda0b4c5b1c8be2fd22537c483749f6db03d073ee4891a1
+```sh
+git clone https://github.com/keysmastersyabro/SkyScopeBETA.git
+cd SkyScopeBETA
+./gradlew --no-daemon build
 ```
 
-[Download checksum file](skyscope-public-3.9.12-public.1.jar.sha256)
+On Windows, use `gradlew.bat --no-daemon build`. The first build downloads Gradle, Minecraft, Fabric and test dependencies; later cached builds can use `--offline`.
+
+The installable JAR is `build/libs/skyscope-3.9.13.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
+
+## Verification
+
+The release passed **79 client regression tests**, the source-boundary check and JAR-content verification using Java 25. The tests cover commands, filters, linking boundaries, credential storage, reconnects and local buy controls. They do not perform a live purchase.
+
+[SHA-256 checksum](skyscope-3.9.13.jar.sha256)
+
+## Data and permissions
+
+Each user links their own account. No credentials or local configuration are included. The client sends account-linking/profile requests, normal feed subscriptions and receipt/display acknowledgements to SkyScope's approved TLS endpoints. General chat, inventory and competitor alerts are not uploaded by this client. Purchase-related chat is handled locally when using the buy controls. Estimated profit is not verified resale profit.
+
+## License
+
+[MIT](LICENSE). This license covers the client source distributed in this repository.

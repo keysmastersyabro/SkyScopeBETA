@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "skyscope",
+  "version": "${version}",
+  "name": "SkyScope",
+  "description": "Account-linked SkyScope flip alerts, filters, Quick Buy and optional Auto Buy.",
+  "authors": [
+    "keysmastersyabro"
+  ],
+  "contact": {
+    "sources": "https://github.com/keysmastersyabro/SkyScopeBETA",
+    "issues": "https://github.com/keysmastersyabro/SkyScopeBETA/issues"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.skyscope.SkyScopeClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
