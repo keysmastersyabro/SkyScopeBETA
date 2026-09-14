@@ -36,12 +36,6 @@ On Windows, use `gradlew.bat --no-daemon build`. The first build downloads Gradl
 
 The installable JAR is `build/libs/skyscope-3.9.13.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
 
-## Verification
-
-The release passed **79 client regression tests**, the source-boundary check and JAR-content verification using Java 25. The tests cover commands, filters, linking boundaries, credential storage, reconnects and local buy controls. They do not perform a live purchase.
-
-[SHA-256 checksum](skyscope-3.9.13.jar.sha256)
-
 ## Data and permissions
 
 Each user links their own account. No credentials or local configuration are included. The client sends account-linking/profile requests, normal feed subscriptions and receipt/display acknowledgements to SkyScope's approved TLS endpoints. General chat, inventory and competitor alerts are not uploaded by this client. Purchase-related chat is handled locally when using the buy controls. Estimated profit is not verified resale profit.
