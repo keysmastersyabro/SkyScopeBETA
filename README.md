@@ -2,7 +2,7 @@
 
 Open-source Minecraft client for SkyScope, built for **Minecraft 26.1.2 / Fabric**.
 
-[**Download SkyScope 3.9.13**](https://github.com/keysmastersyabro/SkyScopeBETA/raw/refs/heads/main/skyscope-3.9.13.jar) · [Commands](COMMANDS.md)
+[**Download SkyScope 3.9.13**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.13/skyscope-3.9.13.jar) · [Commands](COMMANDS.md)
 
 ## Features
 
