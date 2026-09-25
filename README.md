@@ -2,7 +2,7 @@
 
 Open-source Minecraft client for SkyScope, built for **Minecraft 26.1.2 / Fabric**.
 
-[**Download SkyScope 3.9.16**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.16/skyscope-3.9.16.jar) · [Commands](COMMANDS.md)
+[**Download SkyScope 3.9.17**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.17/skyscope-3.9.17.jar) · [Commands](COMMANDS.md)
 
 ## Features
 
@@ -15,7 +15,7 @@ Flip discovery and pricing run on SkyScope's servers. This repository contains t
 ## Install
 
 1. Use **Minecraft 26.1.2**, **Fabric Loader 0.19.3+**, **Fabric API** and **Java 25+**. Fabric API **0.154.0+26.1.2** is the tested version.
-2. Download `skyscope-3.9.16.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
+2. Download `skyscope-3.9.17.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
 3. Sign in at [skyscope.dev](https://skyscope.dev) and generate a Minecraft linking code.
 4. Run `/skyscope link <code>` in Minecraft.
 5. Press **Right Shift** for the dashboard or **B** for the flip browser. `/skyscope help` lists the commands.
@@ -44,7 +44,7 @@ cd SkyScopeBETA
 
 On Windows, use `gradlew.bat --no-daemon build`. The first build downloads Gradle, Minecraft, Fabric and test dependencies; later cached builds can use `--offline`.
 
-The installable JAR is `build/libs/skyscope-3.9.16.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
+The installable JAR is `build/libs/skyscope-3.9.17.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
 
 ## Data and permissions
 

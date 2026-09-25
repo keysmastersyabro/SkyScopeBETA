@@ -81,18 +81,25 @@ public final class AccountSyncClient implements AutoCloseable {
             lastApplied=GSON.toJson(current.get().validated());
             state="LINKED";lastError="";save();return;
         }
-        if(next>revision||lastApplied.isBlank()){
+        String local=GSON.toJson(current.get().validated());
+        // A local edit made since the last sync is the player's latest intent: upload it on top of
+        // whatever revision the server has now, instead of letting a newer server copy (or a
+        // rejected upload) silently overwrite what they just saved in-game.
+        boolean pendingLocal=!lastApplied.isBlank()&&!local.equals(lastApplied);
+        if(pendingLocal){revision=next;push(local);}
+        else if(next>revision||lastApplied.isBlank()){
             FlipSettings applied = next == revision && lastApplied.isBlank()
                     ? restoreLocalBlacklist(server, current.get().validated()) : server;
             apply.accept(applied);revision=next;lastApplied=GSON.toJson(server);save();
         }
-        else {String local=GSON.toJson(current.get().validated());if(!local.equals(lastApplied))push(local);}
         state="SYNCED";lastError="";
     }catch(Exception e){state="RETRYING";lastError=category(e,"sync_failed");}}
     private void push(String local)throws Exception{
         JsonObject body=new JsonObject();body.addProperty("revision",revision);body.add("filters",GSON.fromJson(local,JsonObject.class));
         var response=http.send(HttpRequest.newBuilder(api("/v1/account/config")).timeout(Duration.ofSeconds(8)).header("Authorization","Bearer "+token).header("content-type","application/json").PUT(HttpRequest.BodyPublishers.ofString(GSON.toJson(body))).build(),HttpResponse.BodyHandlers.ofString());
-        if(response.statusCode()==409){revision=0;return;}if(response.statusCode()!=200)throw new IllegalStateException("push HTTP "+response.statusCode());
+        // Someone else changed the profile first: keep the local edit pending; the next poll
+        // (five seconds) learns the new revision and uploads it again.
+        if(response.statusCode()==409){lastError="profile_changed_retrying";return;}if(response.statusCode()!=200)throw new IllegalStateException("push HTTP "+response.statusCode());
         JsonObject p=GSON.fromJson(response.body(),JsonObject.class).getAsJsonObject("profile");revision=p.get("revision").getAsLong();lastApplied=local;save();
     }
     // A restart must not discard a saved blacklist edit awaiting its next five-second sync.

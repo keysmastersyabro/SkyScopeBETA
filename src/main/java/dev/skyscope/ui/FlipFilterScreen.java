@@ -145,17 +145,56 @@ public final class FlipFilterScreen extends Screen {
     private Component bootstrapLabel() { return Component.literal("Active-only model: " + (activeBootstrap ? "ON" : "OFF")); }
     private Component exactLabel() { return Component.literal("Matching: " + (exactOnly ? "EXACT ONLY" : "SAFE FALLBACKS")); }
     private void save() {
+        // Parse field by field so a bad value names its field and opens its page, instead of
+        // failing the whole save with no visible reason (the message used to be drawn only on
+        // screens at least 300 px tall, so Save looked like it did nothing).
+        FlipSettings old = inbox.settings();
+        FlipSettings value;
         try {
-            FlipSettings old = inbox.settings();
-            FlipSettings value = new FlipSettings(FlipSettings.CURRENT_VERSION, parseAmount(minProfit.getValue()),
-                    parseDouble(minRoi.getValue()), parseAmount(maxCost.getValue()), old.minimumEstimatedWorth(),
+            value = new FlipSettings(FlipSettings.CURRENT_VERSION,
+                    amountField(minProfit, "Min net profit", Page.PROFIT),
+                    decimalField(minRoi, "Min ROI %", Page.PROFIT),
+                    amountField(maxCost, "Max buy cost", Page.PROFIT), old.minimumEstimatedWorth(),
                     old.maximumAgeSeconds(), old.saleFeeRate(), old.queueSize(), old.duplicateWindowSeconds(),
-                    old.perItemCooldownSeconds(), parseInt(minConfidence.getValue()), parseInt(maxRisk.getValue()),
-                    parseInt(minSamples.getValue()), parseDouble(minSales.getValue()), parseDouble(maxVolatility.getValue()),
+                    old.perItemCooldownSeconds(),
+                    wholeField(minConfidence, "Min confidence %", Page.EVIDENCE),
+                    wholeField(maxRisk, "Max risk %", Page.EVIDENCE),
+                    wholeField(minSamples, "Min completed sales / 7d", Page.EVIDENCE),
+                    decimalField(minSales, "Min sales / 24h", Page.PROFIT),
+                    decimalField(maxVolatility, "Max price volatility %", Page.MARKET),
                     exactOnly, blockCompetition, words(includes.getValue()), words(excludes.getValue()), activeBootstrap,
-                    parseDouble(maxSellHours.getValue()), words(categories.getValue()), words(rarities.getValue())).validated();
-            manager.save(value); inbox.updateSettings(value); minecraft.setScreen(parent);
-        } catch (Exception ignored) { error = "Check the highlighted-style values: use 250k, 1.5m, or plain numbers."; }
+                    decimalField(maxSellHours, "Max sell hours", Page.EVIDENCE), words(categories.getValue()), words(rarities.getValue())).validated();
+        } catch (InvalidField invalid) {
+            error = invalid.getMessage();
+            page = invalid.page;
+            showPage();
+            return;
+        }
+        try {
+            manager.save(value);
+        } catch (Exception failure) {
+            error = "Could not write the settings file. Check that .minecraft/config is writable.";
+            return;
+        }
+        inbox.updateSettings(value);
+        minecraft.setScreen(parent);
+    }
+
+    private static final class InvalidField extends Exception {
+        final Page page;
+        InvalidField(String label, Page page, String hint) { super(label + ": " + hint); this.page = page; }
+    }
+    private static long amountField(EditBox box, String label, Page page) throws InvalidField {
+        try { return parseAmount(box.getValue()); }
+        catch (Exception bad) { throw new InvalidField(label, page, "use a number like 10000, 250k, 1.5m or 2b"); }
+    }
+    private static double decimalField(EditBox box, String label, Page page) throws InvalidField {
+        try { return parseDouble(box.getValue()); }
+        catch (Exception bad) { throw new InvalidField(label, page, "use a number like 0, 4.5 or 12"); }
+    }
+    private static int wholeField(EditBox box, String label, Page page) throws InvalidField {
+        try { return parseInt(box.getValue()); }
+        catch (Exception bad) { throw new InvalidField(label, page, "use a whole number like 0, 5 or 80"); }
     }
 
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
@@ -177,8 +216,8 @@ public final class FlipFilterScreen extends Screen {
                 case ITEMS -> "Item matching and fallback behavior apply immediately after Save.";
             };
             g.text(font, hint, cardX + 12, height - 55, SkyScopeUi.MUTED, false);
-            if (!error.isBlank()) g.text(font, error, cardX + 12, height - 43, SkyScopeUi.RED, false);
         }
+        if (!error.isBlank()) g.text(font, error, cardX + 12, height - 43, SkyScopeUi.RED, false);
         super.extractRenderState(g, mouseX, mouseY, delta);
     }
 
@@ -195,8 +234,8 @@ public final class FlipFilterScreen extends Screen {
         if (!Double.isFinite(parsed) || parsed < 0 || parsed > Long.MAX_VALUE) throw new NumberFormatException();
         return Math.round(parsed);
     }
-    private static double parseDouble(String value) { double parsed = Double.parseDouble(value.strip()); if (!Double.isFinite(parsed)) throw new NumberFormatException(); return parsed; }
-    private static int parseInt(String value) { return Integer.parseInt(value.strip()); }
+    private static double parseDouble(String value) { String v = value.strip().replace(",", "."); if (v.isEmpty()) return 0; double parsed = Double.parseDouble(v); if (!Double.isFinite(parsed)) throw new NumberFormatException(); return parsed; }
+    private static int parseInt(String value) { String v = value.strip().replace(",", ""); if (v.isEmpty()) return 0; return (int) Math.round(Double.parseDouble(v)); }
     private static String amount(long value) { return Long.toString(value); }
     private static String decimal(double value) { return value == Math.rint(value) ? Long.toString(Math.round(value)) : Double.toString(value); }
     private static List<String> words(String value) { return Arrays.stream(value.split(",")).map(String::strip).filter(v -> !v.isBlank()).toList(); }
