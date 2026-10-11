@@ -8,13 +8,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 final class ClientProtocolBoundaryTest {
-    @Test void clientHasNoOwnerAlertHandlerOrTimingConsumer() {
+    @Test void clientHasNoOwnerAlertHandler() {
         assertThrows(ClassNotFoundException.class, () -> Class.forName(
             "dev.skyscope.hosted.HostedCosmeticAlert", false, getClass().getClassLoader()));
         assertTrue(Arrays.stream(HostedFlipClient.class.getDeclaredMethods()).noneMatch(method ->
             method.getName().equals("setCosmeticAlertConsumer") || method.getName().equals("cosmeticAlertDisplayed")));
-        assertTrue(Arrays.stream(HostedFlipClient.class.getDeclaredClasses()).noneMatch(type ->
-            type.getSimpleName().equals("SnapshotTiming")));
+        // The "Flips in 10 seconds" announcement deliberately uses the feed's snapshot timing.
+        assertTrue(Arrays.stream(HostedFlipClient.class.getDeclaredMethods()).anyMatch(method ->
+            method.getName().equals("setSnapshotTimingConsumer")));
     }
 
     @Test void subscriptionOnlyRequestsTheAccountFeed() throws Exception {

@@ -19,6 +19,8 @@ public final class ClientCommands {
         new Spec("reconnect","reconnect","Reconnect your account feed"),
         new Spec("flip","flip","Open the flip browser"),
         new Spec("filters","filters","Edit your filters"),
+        new Spec("next","next","Open the next queued flip"),
+        new Spec("apikey","apikey","Open the Hypixel API key screen"),
         new Spec("pause","pause","Pause new flip alerts"),
         new Spec("resume","resume","Resume flip alerts"),
         new Spec("clear","clear","Clear the current flip queue"),

@@ -19,6 +19,11 @@ final class ClientBoundaryTest {
         assertFalse(Files.exists(dir.resolve("hosted-device.json")));
         assertFalse(java.util.Arrays.stream(BackendSettingsManager.class.getMethods()).anyMatch(m->m.getName().equals("hostedBearer")));
     }
+    @Test void onlyTheObservedAuctionPreApiRouteExistsAndCannotBeRedirected() {
+        assertEquals("https://feed.skyscope.dev/v1/preapi/observed-auction",ProviderEndpoint.observedAuction(ProviderEndpoint.HOSTED_FEED).toString());
+        assertThrows(IllegalArgumentException.class,()->ProviderEndpoint.observedAuction("wss://evil.example/v1/flips"));
+        assertThrows(IllegalArgumentException.class,()->ProviderEndpoint.account(ProviderEndpoint.HOSTED_FEED,"/v1/preapi/hints"));
+    }
     @Test void transportStaysDisabledUntilLinked() {
         var manager=new BackendSettingsManager(Path.of("unused"));
         assertFalse(manager.settings().enabled());
@@ -32,6 +37,6 @@ final class ClientBoundaryTest {
             assertThrows(IllegalArgumentException.class,()->ProviderEndpoint.account(endpoint,"/v1/account/config"));
         assertThrows(IllegalArgumentException.class,()->ProviderEndpoint.account(ProviderEndpoint.HOSTED_FEED,"/api/control/preapi"));
         Set<String> routes=java.util.Arrays.stream(ProviderEndpoint.class.getDeclaredMethods()).filter(m->java.lang.reflect.Modifier.isPublic(m.getModifiers())).map(m->m.getName()).collect(Collectors.toSet());
-        assertEquals(Set.of("hostedFeed","account"),routes);
+        assertEquals(Set.of("hostedFeed","account","observedAuction"),routes);
     }
 }

@@ -51,6 +51,9 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
     private final AtomicBoolean maintenanceStarted=new AtomicBoolean();private final ReconnectGate reconnectGate=new ReconnectGate();private final ConnectionEpoch connectionEpoch=new ConnectionEpoch();private final StringBuilder fragments=new StringBuilder();private long fragmentBytes;private boolean fragmentTooLarge;private final HostedLatencyTelemetry latency=new HostedLatencyTelemetry();private final Map<String,PendingDisplay> pendingDisplay=new ConcurrentHashMap<>();private final Map<String,Long> sellerRowsSeen=new ConcurrentHashMap<>();private volatile WebSocket socket;private volatile boolean closed;private volatile String lastSubscription="",connectedEndpoint="";private volatile long lastProtocolPing;
     private final ArrayDeque<RejectedCandidate> whyRejected=new ArrayDeque<>();
     private volatile int failures;private volatile long connectedAt,lastMessageAt,lastFlipAt,reconnects,malformed,serverRejected,received,accepted,rejected,replayed,lastReplayAt;private volatile String state="DISABLED",lastError="",lastServerRejection="",lastRejection="";
+    public record SnapshotTiming(long predictedPublicationAt,long lastSnapshot,long serverTime,long cadenceMs,long jitterMs,int samples){}
+    private volatile Consumer<SnapshotTiming> snapshotTimingConsumer=value->{};
+    public void setSnapshotTimingConsumer(Consumer<SnapshotTiming> consumer){snapshotTimingConsumer=consumer==null?value->{}:consumer;}
     public record Status(String state,String endpoint,long connectedAt,long lastMessageAt,long lastFlipAt,int failures,long reconnects,long malformed,long serverRejected,long received,long accepted,long rejected,long replayed,long lastReplayAt,long sequenceGaps,long outOfOrder,long lastSequence,HostedLatencyTelemetry.Snapshot latency,String lastServerRejection,String lastRejection,String lastError){}
     public record RejectedCandidate(String auctionId,String itemName,long purchasePrice,long estimatedWorth,
                                     long netProfit,double roiPercent,int confidencePercent,int riskPercent,
@@ -118,6 +121,7 @@ public final class HostedFlipClient implements AutoCloseable, WebSocket.Listener
             JsonObject protocol=JsonParser.parseString(raw).getAsJsonObject();
             String type=protocol.has("type")?protocol.get("type").getAsString():"";
             if(type.equals("instant_median_alert")||type.equals("instant_median_result")){if(InstantMedianAlerts.allowed(protocol,filters.get(),receiveAt))instantMedianAlerts.accept(protocol,receiveAt);return;}
+            if("snapshot_timing".equals(type)){try{snapshotTimingConsumer.accept(new SnapshotTiming(protocol.get("predictedPublicationAt").getAsLong(),protocol.get("lastSnapshot").getAsLong(),protocol.get("serverTime").getAsLong(),protocol.get("cadenceMs").getAsLong(),protocol.get("jitterMs").getAsLong(),protocol.get("samples").getAsInt()));}catch(RuntimeException invalid){malformed++;}return;}
             if("hello".equals(type)){state="SUBSCRIBING";latency.resetSequence();}
             else if("subscribed".equals(type)){state="LIVE";lastError="";applyServerFilters(protocol);}
             else if("error".equals(type)){state="PROTOCOL_ERROR";lastError=protocol.has("code")?protocol.get("code").getAsString():"backend protocol error";}

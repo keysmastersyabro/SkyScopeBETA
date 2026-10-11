@@ -2,7 +2,7 @@
 
 Open-source Minecraft client for SkyScope, built for **Minecraft 26.1.2 / Fabric**.
 
-[**Download SkyScope 3.9.17**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.17/skyscope-3.9.17.jar) · [Commands](COMMANDS.md)
+[**Download SkyScope 3.9.18**](https://github.com/keysmastersyabro/SkyScopeBETA/releases/download/v3.9.18/skyscope-3.9.18.jar) · [Commands](COMMANDS.md)
 
 ## Features
 
@@ -15,7 +15,7 @@ Flip discovery and pricing run on SkyScope's servers. This repository contains t
 ## Install
 
 1. Use **Minecraft 26.1.2**, **Fabric Loader 0.19.3+**, **Fabric API** and **Java 25+**. Fabric API **0.154.0+26.1.2** is the tested version.
-2. Download `skyscope-3.9.17.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
+2. Download `skyscope-3.9.18.jar` and put it in your Minecraft `mods` folder. Remove any older SkyScope JAR first; install only one SkyScope JAR.
 3. Sign in at [skyscope.dev](https://skyscope.dev) and generate a Minecraft linking code.
 4. Run `/skyscope link <code>` in Minecraft.
 5. Press **Right Shift** for the dashboard or **B** for the flip browser. `/skyscope help` lists the commands.
@@ -32,6 +32,14 @@ If **Auto Buy is also ON**, these alerts can start an immediate purchase **befor
 
 Alerts require an online connection. Results are tracked for up to 180 seconds. Normal validated flips retain their usual filters and purchase controls.
 
+## Hypixel API key (optional)
+
+Open **Hypixel API key** on the dashboard, or run `/skyscope apikey`, and paste your own Hypixel developer key. SkyScope then uses it to look up sellers you see in the auction browser and sends only the new auction IDs to SkyScope, so the resulting flips reach every player. The key is stored encrypted on your computer, shown masked, never logged, and sent only to Hypixel. It uses at most 60% of the key's rate limit and pauses if Hypixel rejects the key; the screen has a **Validate** button. Reports need a linked account.
+
+## Flips in 10 seconds
+
+SkyScope posts "Flips in 10 seconds" in chat shortly before the next flip batch, with an **[Open next flip]** button. `/skyscope next` and the **Open next flip** key (default N) do the same: they open the best queued flip you have not opened yet.
+
 ## Build from source
 
 Install a Java 25 JDK, clone this repository and run:
@@ -44,7 +52,7 @@ cd SkyScopeBETA
 
 On Windows, use `gradlew.bat --no-daemon build`. The first build downloads Gradle, Minecraft, Fabric and test dependencies; later cached builds can use `--offline`.
 
-The installable JAR is `build/libs/skyscope-3.9.17.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
+The installable JAR is `build/libs/skyscope-3.9.18.jar`. The `-sources.jar` contains source, not an installable mod. `./gradlew test` runs the client tests. The build verifies the explicit client source list and packaged files and writes a SHA-256 checksum beside the JAR.
 
 ## Data and permissions
 

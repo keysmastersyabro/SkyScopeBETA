@@ -10,6 +10,7 @@ import java.util.Set;
 public final class ProviderEndpoint {
     public static final String HOSTED_FEED = "wss://feed.skyscope.dev/v1/flips";
     private static final Set<String> APPROVED_HOSTS = Set.of("feed.skyscope.dev");
+    private static final String OBSERVED_AUCTION_ROUTE = "/v1/preapi/observed-auction";
     private static final Set<String> ACCOUNT_ROUTES = Set.of("/v1/account/link", "/v1/account/config");
 
     private ProviderEndpoint() { }
@@ -40,6 +41,13 @@ public final class ProviderEndpoint {
 
 
 
+
+    /** The only PreAPI route in the client: a bare auction UUID found with the player's own key. */
+    public static URI observedAuction(String configuredEndpoint) {
+        URI base = hostedFeed(configuredEndpoint);
+        try { return new URI("https", null, base.getHost(), effectivePort(base), OBSERVED_AUCTION_ROUTE, null, null); }
+        catch (Exception error) { throw new IllegalArgumentException("provider_endpoint_invalid"); }
+    }
 
     static URI approved(String configuredEndpoint, String requiredScheme) {
         try {

@@ -29,6 +29,9 @@ public final class SkyScopeClient implements ClientModInitializer {
     private HostedFlipClient feed;
     private AccountSyncClient account;
     private JavaAutoBuyCoordinator autoBuy;
+    private PlayerApiPreApi playerApi;
+    private final NextFlip nextFlip = new NextFlip();
+    private volatile long announcedFor;
     private String connectedToken = "";
 
     @Override public void onInitializeClient() {
@@ -50,10 +53,14 @@ public final class SkyScopeClient implements ClientModInitializer {
         autoBuy = new JavaAutoBuyCoordinator(inbox::best, inbox::dismiss, quick, account::deviceToken);
         autoBuy.register();
         InstantMedianControls.install(feed, CONFIG.resolve("instant-median.txt"), () -> !inbox.paused(), () -> chat.settings().enabled(), autoBuy);
+        feed.setSnapshotTimingConsumer(this::announce);
+        playerApi = new PlayerApiPreApi(new HypixelApiKeyStore(CONFIG), new PlayerApiReporter(account::deviceToken, version));
+        AuctionSellerScanner.register(playerApi);
         account.start();
         feed.start();
         var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("skyscope", "main"));
         var dashboard = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skyscope.dashboard", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, category));
+        var next = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skyscope.next_flip", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, category));
         var flips = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skyscope.flip_alert", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, category));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             String token = account.deviceToken();
@@ -68,10 +75,11 @@ public final class SkyScopeClient implements ClientModInitializer {
             }
             while (dashboard.consumeClick()) openDashboard();
             while (flips.consumeClick()) openFlips();
+            while (next.consumeClick()) openNextFlip();
         });
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
             dispatcher.getRoot().addChild(ClientCommands.<FabricClientCommandSource>tree(this::command)));
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> { feed.close(); account.close(); }, "skyscope-client-shutdown"));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> { feed.close(); account.close(); playerApi.close(); }, "skyscope-client-shutdown"));
     }
 
     private void applyFilters(FlipSettings value) { filters.save(value); inbox.updateSettings(value); }
@@ -86,9 +94,30 @@ public final class SkyScopeClient implements ClientModInitializer {
         }
         return result;
     }
+    private void announce(HostedFlipClient.SnapshotTiming timing) {
+        if (!NextFlip.shouldAnnounce(timing, announcedFor)) return;
+        announcedFor = timing.predictedPublicationAt();
+        Minecraft.getInstance().execute(() -> {
+            var mc = Minecraft.getInstance();
+            if (chat.settings().enabled() && !inbox.paused() && mc.gui != null)
+                mc.gui.getChat().addClientSystemMessage(NextFlip.announcement());
+        });
+    }
+    /** Sends /viewauction for the best queued flip not yet opened. Only a physical key press or click gets here. */
+    private boolean openNextFlip() {
+        var mc = Minecraft.getInstance();
+        FlipOpportunity flip = nextFlip.pick(inbox.top());
+        if (flip == null || mc.player == null) return false;
+        mc.execute(() -> {
+            mc.player.connection.sendCommand(AuctionOpenAction.commandFor(flip.auctionId()));
+            mc.gui.getChat().addClientSystemMessage(Component.literal("§b[SkyScope] §fOpening " + flip.itemName()
+                + " §7• estimated net §a+" + String.format(java.util.Locale.ROOT, "%,d", flip.netProfit())));
+        });
+        return true;
+    }
     private void openDashboard() {
         var mc = Minecraft.getInstance();
-        mc.execute(() -> mc.setScreen(new ClientDashboard(mc.screen, inbox, feed, account, filters, quick)));
+        mc.execute(() -> mc.setScreen(new ClientDashboard(mc.screen, inbox, feed, account, filters, quick, playerApi)));
     }
     private void openFlips() {
         var mc = Minecraft.getInstance();
@@ -129,6 +158,8 @@ public final class SkyScopeClient implements ClientModInitializer {
             switch (action) {
                 case "dashboard" -> openDashboard();
                 case "flip" -> openFlips();
+                case "next" -> { if (!openNextFlip()) say(source,"No queued flip to open."); }
+                case "apikey" -> source.getClient().execute(() -> source.getClient().setScreen(new ApiKeyScreen(source.getClient().screen, playerApi, !account.deviceToken().isBlank())));
                 case "filters" -> source.getClient().execute(() -> source.getClient().setScreen(new FlipFilterScreen(source.getClient().screen,inbox,filters)));
                 case "help" -> ClientCommands.SPECS.forEach(s -> say(source,"/skyscope"+(s.path().isEmpty()?"":" "+s.path())+" — "+s.description()));
                 case "status" -> say(source,"Account: "+account.status().state()+" • profile: "+account.status().profile()+" • feed: "+feed.status().state()+" • queued: "+inbox.stats().queueSize());

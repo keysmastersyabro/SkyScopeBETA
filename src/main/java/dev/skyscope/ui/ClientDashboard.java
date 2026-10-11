@@ -14,10 +14,11 @@ public final class ClientDashboard extends Screen {
     private final AccountSyncClient account;
     private final FlipSettingsManager filters;
     private final QuickBuySettingsManager quick;
+    private final PlayerApiPreApi playerApi;
     public ClientDashboard(Screen parent,FlipInbox inbox,HostedFlipClient feed,AccountSyncClient account,
-            FlipSettingsManager filters,QuickBuySettingsManager quick) {
+            FlipSettingsManager filters,QuickBuySettingsManager quick,PlayerApiPreApi playerApi) {
         super(Component.literal("SkyScope"));this.parent=parent;this.inbox=inbox;this.feed=feed;
-        this.account=account;this.filters=filters;this.quick=quick;
+        this.playerApi=playerApi;this.account=account;this.filters=filters;this.quick=quick;
     }
     @Override protected void init() {
         int w=Math.min(320,width-24),x=(width-w)/2,y=Math.max(114,height/2-4),half=(w-6)/2;
@@ -32,6 +33,7 @@ public final class ClientDashboard extends Screen {
                 b.setMessage(Component.literal("Instant median alerts: "+(feed.instantMedianAlertsEnabled()?"ON":"OFF")));}
             catch(java.io.IOException error){b.setMessage(Component.literal("Setting could not be saved"));}
         }).bounds(x,y+78,w,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Hypixel API key"),b->minecraft.setScreen(new ApiKeyScreen(this,playerApi,!account.deviceToken().isBlank()))).bounds(x,y+104,w,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mouseX,int mouseY,float delta) {
         SkyScopeUi.background(g,width,height);

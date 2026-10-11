@@ -12,6 +12,8 @@ Every command starts with `/skyscope`. `<code>`, `<uuid>` and `<item>` are value
 | `/skyscope reconnect` | Reconnect your account feed |
 | `/skyscope flip` | Open the flip browser |
 | `/skyscope filters` | Edit your filters |
+| `/skyscope next` | Open the next queued flip |
+| `/skyscope apikey` | Open the Hypixel API key screen |
 | `/skyscope pause` | Pause new flip alerts |
 | `/skyscope resume` | Resume flip alerts |
 | `/skyscope clear` | Clear the current flip queue |
