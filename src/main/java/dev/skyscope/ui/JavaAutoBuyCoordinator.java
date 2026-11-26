@@ -27,7 +27,7 @@ public final class JavaAutoBuyCoordinator {
         Minecraft client=Minecraft.getInstance();
         client.execute(() -> {
             if(!enabled() || !settings.settings().enabled() || !permission.getAsBoolean() || client.getConnection()==null ||
-                client.screen!=null || !currentAuctionId.isBlank()) return;
+                client.gui.screen()!=null || !currentAuctionId.isBlank()) return;
             instantPermission=permission;
             open(client,intent);
             if(currentAuctionId.isBlank())instantPermission=null;
@@ -59,7 +59,7 @@ public final class JavaAutoBuyCoordinator {
         if (!enabled() || flip == null || flip.auctionId().isBlank()) return;
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
-            if (!enabled() || client.getConnection() == null || client.screen != null || targetGuard.active()) return;
+            if (!enabled() || client.getConnection() == null || client.gui.screen() != null || targetGuard.active()) return;
             open(client, flip);
         });
     }
@@ -70,7 +70,7 @@ public final class JavaAutoBuyCoordinator {
             if (!auctionId.equalsIgnoreCase(currentAuctionId)) return;
             cancel();
             Minecraft client = Minecraft.getInstance();
-            if (client.screen != null) client.setScreen(null);
+            if (client.gui.screen() != null) client.gui.setScreen(null);
             LOGGER.warn("Java Auto Buy quarantined {}", auctionId);
         });
     }
@@ -82,17 +82,17 @@ public final class JavaAutoBuyCoordinator {
         try {
             if (!targetGuard.active()) {
                 // A manually opened BIN/confirmation screen is never an automatic purchase intent.
-                if (client.screen == null) openBest(client);
+                if (client.gui.screen() == null) openBest(client);
                 return;
             }
             var context = targetGuard.context(client.getConnection(), purchaseSession(),
                     Instant.now(), System.nanoTime());
             if (context != AutoBuyTargetGuard.Result.WAIT) { finish(); return; }
-            if (client.screen == null) {
+            if (client.gui.screen() == null) {
                 if (sawAuction) finish();
                 return; // Opening is asynchronous; the original deadline is not renewed.
             }
-            if (!(client.screen instanceof net.minecraft.client.gui.screens.inventory.ContainerScreen container)
+            if (!(client.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.ContainerScreen container)
                     || !QuickBuyOverlay.isAuctionShape(container)) { finish(); return; }
             sawAuction = true;
             if (awaitingResult) return;
@@ -106,7 +106,7 @@ public final class JavaAutoBuyCoordinator {
             } else if (!targetGuard.active()) {
                 settings.setAutoBuyEnabled(false);
                 cancel();
-                if (client.player != null) client.gui.getChat().addClientSystemMessage(Component.literal(
+                if (client.player != null) client.gui.hud.getChat().addClientSystemMessage(Component.literal(
                         "§b[SkyScope] §eAuto Buy paused: this auction's identity, item or exact price could not be verified. Inspect it and buy manually."));
             }
         } catch (Exception error) {
@@ -144,7 +144,7 @@ public final class JavaAutoBuyCoordinator {
             if (!enabled() || currentAuctionId.isBlank()) return;
             finish();
             Minecraft client = Minecraft.getInstance();
-            if (client.screen != null) client.setScreen(null);
+            if (client.gui.screen() != null) client.gui.setScreen(null);
         });
     }
     static boolean isInsufficientCoinsMessage(String message) {

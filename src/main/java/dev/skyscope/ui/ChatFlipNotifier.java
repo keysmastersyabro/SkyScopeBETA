@@ -15,14 +15,14 @@ public final class ChatFlipNotifier {
 
     public static void post(Minecraft client, FlipOpportunity flip, ChatFlipSettings settings) {
         if (client.player == null || client.gui == null) return;
-        for (Component line : renderComponents(flip, settings)) client.gui.getChat().addClientSystemMessage(line);
+        for (Component line : renderComponents(flip, settings)) client.gui.hud.getChat().addClientSystemMessage(line);
     }
 
     public static void postSellerRow(
             Minecraft client, HostedSellerRowMessage row, ChatFlipSettings settings) {
         if (client.player == null || client.gui == null) return;
         for (Component line : renderSellerRowComponents(row, settings))
-            client.gui.getChat().addClientSystemMessage(line);
+            client.gui.hud.getChat().addClientSystemMessage(line);
     }
 
     static List<String> render(FlipOpportunity flip, ChatFlipSettings settings) {

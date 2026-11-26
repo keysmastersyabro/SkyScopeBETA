@@ -22,8 +22,8 @@ public final class ClientDashboard extends Screen {
     }
     @Override protected void init() {
         int w=Math.min(320,width-24),x=(width-w)/2,y=Math.max(114,height/2-4),half=(w-6)/2;
-        addRenderableWidget(Button.builder(Component.literal("Browse flips"),b->minecraft.setScreen(new FlipBrowserScreen(this,inbox,feed,filters,quick))).bounds(x,y,half,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Edit filters"),b->minecraft.setScreen(new FlipFilterScreen(this,inbox,filters))).bounds(x+half+6,y,half,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Browse flips"),b->minecraft.gui.setScreen(new FlipBrowserScreen(this,inbox,feed,filters,quick))).bounds(x,y,half,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Edit filters"),b->minecraft.gui.setScreen(new FlipFilterScreen(this,inbox,filters))).bounds(x+half+6,y,half,20).build());
         addRenderableWidget(Button.builder(Component.literal(quick.settings().autoBuyEnabled()?"Auto Buy: ON":"Auto Buy: OFF"),b->{quick.toggleAutoBuy();b.setMessage(Component.literal(quick.settings().autoBuyEnabled()?"Auto Buy: ON":"Auto Buy: OFF"));}).bounds(x,y+26,half,20).build());
         addRenderableWidget(Button.builder(Component.literal(inbox.paused()?"Resume alerts":"Pause alerts"),b->{inbox.togglePaused();b.setMessage(Component.literal(inbox.paused()?"Resume alerts":"Pause alerts"));}).bounds(x+half+6,y+26,half,20).build());
         addRenderableWidget(Button.builder(Component.literal("Reconnect"),b->feed.forceReconnect()).bounds(x,y+52,half,20).build());
@@ -33,7 +33,7 @@ public final class ClientDashboard extends Screen {
                 b.setMessage(Component.literal("Instant median alerts: "+(feed.instantMedianAlertsEnabled()?"ON":"OFF")));}
             catch(java.io.IOException error){b.setMessage(Component.literal("Setting could not be saved"));}
         }).bounds(x,y+78,w,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Hypixel API key"),b->minecraft.setScreen(new ApiKeyScreen(this,playerApi,!account.deviceToken().isBlank()))).bounds(x,y+104,w,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Hypixel API key"),b->minecraft.gui.setScreen(new ApiKeyScreen(this,playerApi,!account.deviceToken().isBlank()))).bounds(x,y+104,w,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mouseX,int mouseY,float delta) {
         SkyScopeUi.background(g,width,height);
@@ -44,6 +44,6 @@ public final class ClientDashboard extends Screen {
         g.centeredText(font,account.deviceToken().isBlank()?"Then use /skyscope link <code>":"/skyscope help lists all commands",width/2,99,SkyScopeUi.MUTED);
         super.extractRenderState(g,mouseX,mouseY,delta);
     }
-    @Override public void onClose(){minecraft.setScreen(parent);}
+    @Override public void onClose(){minecraft.gui.setScreen(parent);}
     @Override public boolean isPauseScreen(){return false;}
 }

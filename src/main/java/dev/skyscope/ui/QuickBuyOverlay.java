@@ -80,7 +80,7 @@ public final class QuickBuyOverlay {
     }
 
     private static void click(Minecraft client, ContainerScreen container, QuickBuySettingsManager settings) {
-        if (!settings.settings().enabled() || client.screen != container || client.player == null || client.gameMode == null) return;
+        if (!settings.settings().enabled() || client.gui.screen() != container || client.player == null || client.gameMode == null) return;
         Action current = action(container);
         if (!current.clickable()) return;
         if (!allowPhysicalClick(container.getMenu().containerId, current.slot(), current.stage(), System.nanoTime())) return;
@@ -96,7 +96,7 @@ public final class QuickBuyOverlay {
             return new CompanionClickResult(false, "DISABLED", "Java Auto Buy is disabled.");
         if (target == null || !target.active())
             return new CompanionClickResult(false, "NO_TARGET", "No accepted purchase target.");
-        Screen screen = client.screen;
+        Screen screen = client.gui.screen();
         if (!(screen instanceof ContainerScreen container) || !isAuctionShape(container)
                 || client.player == null || client.gameMode == null)
             return new CompanionClickResult(false, "UNRELATED", "No validated BIN purchase screen is open.");
@@ -109,7 +109,7 @@ public final class QuickBuyOverlay {
         var result = target.click(AuctionPurchaseScreen.read(container, current.slot()),
                 AutoBuyTargetGuard.Phase.valueOf(current.stage().name()), connection, account,
                 java.time.Instant.now(), now, () -> {
-                    if (client.screen != container || client.getConnection() != connection
+                    if (client.gui.screen() != container || client.getConnection() != connection
                             || !account.equals(accountSession.get()) || !settings.settings().enabled()
                             || !settings.settings().autoBuyEnabled()) return false;
                     if (!allowPhysicalClick(container.getMenu().containerId, current.slot(), current.stage(), now)) return false;
@@ -125,7 +125,7 @@ public final class QuickBuyOverlay {
     static CompanionState autoState(Minecraft client, QuickBuySettingsManager settings) {
         if (!settings.settings().enabled() || !settings.settings().autoBuyEnabled())
             return new CompanionState("DISABLED", "Java Auto Buy is disabled.", false);
-        if (!(client.screen instanceof ContainerScreen container) || !isAuctionShape(container))
+        if (!(client.gui.screen() instanceof ContainerScreen container) || !isAuctionShape(container))
             return new CompanionState("READY_TO_OPEN", "Ready for an accepted flip.", true);
         Action current = action(container);
         return new CompanionState(current.stage().name(), current.label(), current.clickable());
@@ -159,7 +159,7 @@ public final class QuickBuyOverlay {
         if (title.strip().equals("BIN Auction View") && size == 54) {
             ItemStack stack = menu.getContainer().getItem(BUY_SLOT);
             String name = stack.isEmpty() ? "" : stack.getHoverName().getString();
-            return classify(title, size, name, !stack.isEmpty() && stack.getItem() == Items.RED_BED);
+            return classify(title, size, name, !stack.isEmpty() && stack.getItem() == Items.BED.pick(net.minecraft.world.item.DyeColor.RED));
         }
         if (title.strip().equals("Confirm Purchase") && size == 27) {
             ItemStack stack = menu.getContainer().getItem(CONFIRM_SLOT);
@@ -196,10 +196,10 @@ public final class QuickBuyOverlay {
 
     private static boolean isPositiveConfirmationItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        return stack.getItem() == Items.LIME_TERRACOTTA
-                || stack.getItem() == Items.GREEN_TERRACOTTA
-                || stack.getItem() == Items.LIME_WOOL
-                || stack.getItem() == Items.GREEN_WOOL;
+        return stack.getItem() == Items.DYED_TERRACOTTA.pick(net.minecraft.world.item.DyeColor.LIME)
+                || stack.getItem() == Items.DYED_TERRACOTTA.pick(net.minecraft.world.item.DyeColor.GREEN)
+                || stack.getItem() == Items.WOOL.pick(net.minecraft.world.item.DyeColor.LIME)
+                || stack.getItem() == Items.WOOL.pick(net.minecraft.world.item.DyeColor.GREEN);
     }
 
     private static boolean isPositiveConfirmationLabel(String value) {

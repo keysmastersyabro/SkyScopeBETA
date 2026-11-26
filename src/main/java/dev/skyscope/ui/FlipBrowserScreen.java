@@ -61,10 +61,10 @@ public final class FlipBrowserScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Next"), b -> move(1)).bounds(start + each + 4, bottom, each, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Sort"), b -> { inbox.cycleSort(); windowStart = 0; ensureSelected(); })
                 .bounds(start + (each + 4) * 2, bottom, each, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Filters"), b -> minecraft.setScreen(new FlipFilterScreen(this, inbox, settingsManager)))
+        addRenderableWidget(Button.builder(Component.literal("Filters"), b -> minecraft.gui.setScreen(new FlipFilterScreen(this, inbox, settingsManager)))
                 .bounds(start + (each + 4) * 3, bottom, each, 22).build());
         addRenderableWidget(Button.builder(Component.literal(inbox.paused() ? "Resume" : "Pause"), b -> {
-            inbox.togglePaused(); minecraft.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
+            inbox.togglePaused(); minecraft.gui.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
         }).bounds(start + (each + 4) * 4, bottom, each, 22).build());
         int listW = Math.min(410, Math.max(290, width * 2 / 5));
         int detailX = 18 + listW + 10, detailW = width - detailX - 18;
@@ -98,11 +98,11 @@ public final class FlipBrowserScreen extends Screen {
             inbox.cycleSort(); windowStart = 0; ensureSelected();
         }).bounds(margin + (navWidth + gap) * 2, navY, navWidth, 20).build());
         addRenderableWidget(Button.builder(Component.literal("FILTER"), b ->
-                minecraft.setScreen(new FlipFilterScreen(this, inbox, settingsManager)))
+                minecraft.gui.setScreen(new FlipFilterScreen(this, inbox, settingsManager)))
                 .bounds(margin + (navWidth + gap) * 3, navY, navWidth, 20).build());
         addRenderableWidget(Button.builder(Component.literal(inbox.paused() ? "RESUME" : "PAUSE"), b -> {
             inbox.togglePaused();
-            minecraft.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
+            minecraft.gui.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
         }).bounds(margin + (navWidth + gap) * 4, navY, navWidth, 20).build());
     }
 
@@ -134,7 +134,7 @@ public final class FlipBrowserScreen extends Screen {
         settingsManager.save(value);
         inbox.updateSettings(value);
         selectedId = "";
-        minecraft.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
+        minecraft.gui.setScreen(new FlipBrowserScreen(parent, inbox, hosted, settingsManager, quickBuySettings));
     }
 
     private void copySelected() {
@@ -389,6 +389,6 @@ public final class FlipBrowserScreen extends Screen {
         if (millis < 60_000) return millis / 1_000 + "s ago";
         return millis / 60_000 + "m ago";
     }
-    @Override public void onClose() { minecraft.setScreen(parent); }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }
