@@ -75,11 +75,11 @@ public final class FlipFilterScreen extends Screen {
         int actionGap = 4, actionWidth = Math.max(82, (width - 36 - actionGap * 2) / 3), actionY = height - 28;
         addRenderableWidget(Button.builder(Component.literal("RESET DEFAULTS"), button -> {
             manager.save(FlipSettings.defaults()); inbox.updateSettings(FlipSettings.defaults());
-            minecraft.setScreen(new FlipFilterScreen(parent, inbox, manager));
+            minecraft.gui.setScreen(new FlipFilterScreen(parent, inbox, manager));
         }).bounds(18, actionY, actionWidth, 22).build());
         addRenderableWidget(Button.builder(Component.literal("SAVE & APPLY LIVE"), button -> save())
                 .bounds(18 + actionWidth + actionGap, actionY, actionWidth, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("CANCEL"), button -> minecraft.setScreen(parent))
+        addRenderableWidget(Button.builder(Component.literal("CANCEL"), button -> minecraft.gui.setScreen(parent))
                 .bounds(18 + (actionWidth + actionGap) * 2, actionY, actionWidth, 22).build());
         showPage();
     }
@@ -177,7 +177,7 @@ public final class FlipFilterScreen extends Screen {
             return;
         }
         inbox.updateSettings(value);
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private static final class InvalidField extends Exception {
@@ -239,6 +239,6 @@ public final class FlipFilterScreen extends Screen {
     private static String amount(long value) { return Long.toString(value); }
     private static String decimal(double value) { return value == Math.rint(value) ? Long.toString(Math.round(value)) : Double.toString(value); }
     private static List<String> words(String value) { return Arrays.stream(value.split(",")).map(String::strip).filter(v -> !v.isBlank()).toList(); }
-    @Override public void onClose() { minecraft.setScreen(parent); }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

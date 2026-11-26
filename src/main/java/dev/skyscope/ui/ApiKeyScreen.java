@@ -63,6 +63,6 @@ public final class ApiKeyScreen extends Screen {
         if (!message.isEmpty()) g.centeredText(font, message, width / 2, Math.max(96, height / 2 - 10) + 56, SkyScopeUi.WHITE);
         super.extractRenderState(g, mouseX, mouseY, delta);
     }
-    @Override public void onClose() { minecraft.setScreen(parent); }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

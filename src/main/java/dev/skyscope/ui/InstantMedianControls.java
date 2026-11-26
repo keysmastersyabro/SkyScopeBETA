@@ -26,7 +26,7 @@ public final class InstantMedianControls {
                     && feed.instantPurchaseAllowed(notice.purchase()));
             }
             if(!display.getAsBoolean()) return;
-            mc.gui.getChat().addClientSystemMessage(Component.literal("§b[SkyScope] "+notice.text())
+            mc.gui.hud.getChat().addClientSystemMessage(Component.literal("§b[SkyScope] "+notice.text())
                 .append(Component.literal(" §a[Open auction]").withStyle(s->s.withClickEvent(new ClickEvent.RunCommand("/viewauction "+notice.auctionId())))));
         });
         });
